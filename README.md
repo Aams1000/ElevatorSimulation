@@ -11,7 +11,7 @@ of elevators that operate the floors of a building. Through the command line, th
 
 The system uses the Thread.sleep() function to time-step the simulation. Traveling one floor takes two seconds.
 
-The most interesting part of the simulation is assigning requests to elevators. The program uses "proximity scores" to gauge each elevator's ease of fulfilling a request. This is calculated by weighting the distance to the request, if traveling there would require changing direction, and if subsequently fulfilling the request would require reversing our current trajectory. For instance:
+The most interesting part of the simulation is assigning requests to elevators. The program uses "proximity scores" to gauge each elevator's ease of fulfilling a request. This is calculated by weighting the distance to the request, if traveling there would require changing direction, and if subsequently fulfilling the request would require reversing the current trajectory. For instance:
 
   If the Elevator is on floor 10 and traveling UP, a request on floor 5 to go DOWN would be five floors away, require      switching direction to arrive, and make us change our current direction to DOWN.
 
