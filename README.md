@@ -15,6 +15,6 @@ The most interesting part of the simulation is assigning requests to elevators. 
 
   If the Elevator is on floor 10 and traveling UP, a request on floor 5 to go DOWN would be five floors away, require      switching direction to arrive, and make us change our current direction to DOWN.
 
-This request would receive a high cost. Further documentation on this strategy can be found in Elevator.java.
+The request is given to the elevator best equipped to handle it. Further documentation on this strategy can be found in Elevator.java.
 
 Enjoy!
