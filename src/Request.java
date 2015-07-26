@@ -1,10 +1,15 @@
-
+//Request is the object sent to an elevator. Contains the floor and the direction to go AFTER getting there.
+//For example, if a passenger on floor 5 hits the "UP" button, the Request will have destination 5 and direction UP.
+//If someone inside the elevator presses floor 7, the Request will have destination 7 and direction STATIONARY.
+//Requests cab be combined into pickups and dropoffs.
 public class Request {
 	
 	//possible directions
 	private final int UP = 0;
 	private final int DOWN = 1;
 	private final int STATIONARY = 2;
+	
+	//floor boundaries
 	private final int MIN_FLOOR = 0;
 	private final int MAX_FLOOR = 20;
 	

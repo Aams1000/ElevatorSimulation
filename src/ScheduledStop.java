@@ -1,7 +1,8 @@
-
+//ScheduledStop is the object we insert in our priority queue of scheduled stops.
+//Contains both the request and it's proximity score
 public class ScheduledStop {
 	
-	//request and it's proximity score
+	//request and its proximity score
 	private Request request;
 	private double proximityScore;
 	
@@ -18,5 +19,4 @@ public class ScheduledStop {
 	public double getProximityScore(){
 		return proximityScore;
 	}
-
 }

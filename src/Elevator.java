@@ -1,14 +1,21 @@
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
+//Elevator represents...an elevator. It contains an ElevatorStatus object, a PriorityQueue of ScheduledStops, and an ArrayList
+//of all Requests is has received. Incoming Requests are ordered by proximityScore, a weighted value representing the
+//ease of fulfilling the Request. This is calculated by weighting the distance to the Request, if traveling there would
+//require changing direction, and if subsequently fulfilling the Request would require reversing our current trajectory. For instance:
+
+//If the Elevator is on floor 10 and traveling UP, a request on floor 5 to go DOWN would be five floors away, require switching
+//direction to arrive, and make us change our current direction to DOWN. This request would receive a high cost.
+
+//The weights can be adjusted to match the operator's taste. When the Elevator receives a Request, it calls the operate()
+//function if it is not currently active. The operate() function uses the Thread.sleep() function to simulate travel.
+//The time between floors is set to TRAVEL_DELAY.
 public class Elevator {
 
-	//storing history of requests
-	ArrayList<Request> requestLog = new ArrayList<Request>();
-	
-	//the prioirty queue wants an initial capacity. let's give it one
+	//the priority queue wants an initial capacity. let's give it one
 	private final int INITIAL_CAPACITY = 15;
 	
 	//possible directions
@@ -29,9 +36,13 @@ public class Elevator {
 	//elevator status
 	private ElevatorStatus status;
 	private boolean active = false;
+	
+	//travel delay for going between floors
+	private final int TRAVEL_DELAY = 2000;
 
-	//list of destinations
+	//list of destinations and log of received Requests
 	PriorityBlockingQueue<ScheduledStop> destinations = new PriorityBlockingQueue<ScheduledStop>(INITIAL_CAPACITY, new ScheduledStopComparator());
+	ArrayList<Request> requestLog = new ArrayList<Request>();
 	
 	//constructor takes initial location
 	public Elevator(int initialFloor){
@@ -50,8 +61,8 @@ public class Elevator {
 			operate();
 	}
 	
-	//addPickup function inserts pickup location and passenger's destination into destination
-	public void addPickup(Request pickup, Request dropoff){
+	//addPickup function inserts pickup and dropoff Requests into elevator destinations
+	public void addPickupAndDropoff(Request pickup, Request dropoff){
 		if (!pickup.isValid() || !dropoff.isValid())
 			return;
 		//if the dropoff stop would be placed in front of pickup up the passenger, adjust proximityScores
@@ -59,7 +70,7 @@ public class Elevator {
 		double dropoffProximityScore = calculateProximityScore(dropoff);
 		if (dropoffProximityScore < pickupProximityScore)
 			dropoffProximityScore = pickupProximityScore + SCORE_ADJUSTMENT;
-		//add stops to dropoffs
+		//add stops to elevator destinations and history log
 		ScheduledStop firstStop = new ScheduledStop(pickup, pickupProximityScore);
 		ScheduledStop secondStop = new ScheduledStop(dropoff, dropoffProximityScore);
 		destinations.add(firstStop);
@@ -71,24 +82,49 @@ public class Elevator {
 			operate();
 	}
 	
-	//operate function makes all stops in the priority queue. Takes no parameters, returns void
+	//operate function makes all stops in the priority queue. Implements time stepping of one second per floor.
+	//Takes no parameters, returns void
 	private void operate(){
 		active = true;
-		//make stops
-		while (!destinations.isEmpty()){
-			Request curr = destinations.poll().getRequest();
-			status.setCurrentFloor(curr.getDestination());
-			status.setDirection(curr.getDirection());
-			
-		}
-		active = false;
+		new Thread (new Runnable(){
+			public void run(){
+				while (!destinations.isEmpty()){
+					Request curr = destinations.poll().getRequest();
+					//move one floor at a time until we have reached our destination
+					while (status.getCurrentFloor() != curr.getDestination()){
+						//check if floor is above or below
+						if (curr.getDestination() < status.getCurrentFloor()){
+							try{
+								Thread.sleep(TRAVEL_DELAY);
+							}
+							catch(InterruptedException ex){
+							}
+							status.setCurrentFloor(status.getCurrentFloor() - 1);
+						}
+						//floor is above
+						else{
+							try{
+								Thread.sleep(TRAVEL_DELAY);
+							}
+							catch(InterruptedException ex){
+							}
+							status.setCurrentFloor(status.getCurrentFloor() + 1);
+						}
+					}
+					status.setCurrentFloor(curr.getDestination());
+					status.setDirection(curr.getDirection());
+				}
+			//elevator has completed all requests, going into standby
+			active = false;	
+			}
+		}).start();
 	}
 
-	//calculateProximityScore function finds weighted value representing how close a request is
-	//takes current direction and distance into account
+	//calculateProximityScore function finds weighted value representing the ease of fulfilling a Request.
+	//takes distance to Request, if traveling there would require changing direction, and if
+	//fulfilling it would require changing current trajectory into account. A low value means low cost,
+	//high value means high cost.
 	public double calculateProximityScore(Request request){
-		//check distance to request, if getting there requires changing directions,
-		//and if the elevator would have to change directions afterward
 		int distance = Math.abs(status.getCurrentFloor() - request.getDestination());
 		boolean onCurrentPath = onCurrentPath(request);
 		boolean directionsMatch = directionsMatch(request);
@@ -101,19 +137,7 @@ public class Elevator {
 		return proximityScore;
 	}
 	
-	//getStatus function
-	public ElevatorStatus getStatus(){
-		return status;
-	}
-	
-	public ArrayList<Request> getRequestLog(){
-		return requestLog;
-	}
-	
-	public double getDestinationWeight(){
-		return DESTINATION_WEIGHT;
-	}
-	//onCurrentpath checks if elevator would have to change direction to get to request
+	//onCurrentpath checks if elevator would have to change direction to get to Request
 	private boolean onCurrentPath(Request request){
 		//if elevator is not moving or if request is on same floor, elevator does not have to change direction
 		if (status.getDirection() == STATIONARY)
@@ -134,9 +158,9 @@ public class Elevator {
 		return false;	
 	}
 	
-	//directionsMatch checks if request's direction matches the elevator's current direction
+	//directionsMatch checks if Request's direction matches the Elevator's current direction
 	private boolean directionsMatch(Request request){
-		//if request has no next direction or elevator is stationary, we do not have to worry about a mismatch
+		//if request has no next direction or Elevator is stationary, we do not have to worry about a mismatch
 		if (request.getDirection() == STATIONARY || status.getDirection() == STATIONARY)
 			return true;
 		//check next direction
@@ -145,7 +169,8 @@ public class Elevator {
 		return false;
 	}
 	
-	//comparator for priority queue compares ScheduledStops based on proximity score
+	//comparator for priority queue compares ScheduledStops based on proximity score. A low score means
+	//Request is easy to fulfill, high score means difficult to fulfill
 	class ScheduledStopComparator implements Comparator<ScheduledStop>{
 		public int compare(ScheduledStop a, ScheduledStop b){
 			if (a.getProximityScore() < b.getProximityScore())
@@ -154,5 +179,16 @@ public class Elevator {
 				return 0;
 			return 1;
 		}
+	}
+	
+	//getters
+	public ElevatorStatus getStatus(){
+		return status;
+	}
+	public ArrayList<Request> getRequestLog(){
+		return requestLog;
+	}
+	public double getDestinationWeight(){
+		return DESTINATION_WEIGHT;
 	}
 }	

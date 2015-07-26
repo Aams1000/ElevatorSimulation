@@ -1,10 +1,24 @@
 import java.util.Random;
 import java.util.Scanner;
 
+//ControlPanel allows the Elevator operator to oversee and control the elevator system. The system allows
+//NUM_ELEVATORS Elevators, which the operator can adjust to his or her liking. The operator
+//controls the system through the command line by adding Requests, pickup and dropoff combinations,
+//checking the status of all Elevators or a specific Elevator, and viewing the log of a specific
+//Elevator's requests. The commands are as follows:
+
+//request <floor_number> : puts in a Request for an Elevator to visit <floor_number>
+//pickup <pickup_floor> <dropoff_floor> : puts in a Request to pickup at <pickup_floor> and dropoff at <dropoff_floor>
+//status 				: prints statuses of all Elevators
+//status <elevator_number> : prints status of <elevator_number>
+//log <elevator_number> : prints the log of <elevator_number> Request history
+//exit 					: exits the program
+
+//Illegal commands will receive an error message. Have fun!
 public class ControlPanel {
 
 	//number of elevators
-	private static final int NUM_ELEVATORS = 2;
+	private static final int NUM_ELEVATORS = 16;
 	
 	//possible directions
 	private static final int UP = 0;
@@ -14,7 +28,6 @@ public class ControlPanel {
 	//parameters for generating random requests and user requests
 	private static final int MAX_FLOOR = 20;
 	private static final int NUM_CONDITIONS = 3;
-	private static final int NUM_REQUESTS = 50;
 	
 	//random number generator for generating requests
 	private static Random rand = new Random();
@@ -25,30 +38,37 @@ public class ControlPanel {
 	//scanner for user input
 	private static Scanner scanner = new Scanner(System.in);
 	private static final String INPUT_SPLITTER = " ";
+	
+	//scanner commands
 	private static final String EXIT_COMMAND = "exit";
 	private static final String REQUEST_LOG = "log";
+	private static final String REQUEST_STATUS = "status";
+	private static final String REQUEST_REQUEST = "request";
+	private static final String REQUEST_PICKUP = "pickup";
+	private static final String EXIT_MESSAGE = "Goodbye!";
 	
 	public static void main(String[] args) {
 		initializeElevators();
 		boolean exit = false;
+		//read in operator commands
 		System.out.println("Welcome to the elevator control panel. Please input a command.");
 		while (!exit){
 			String line = scanner.nextLine();
 			String[] input = line.split(INPUT_SPLITTER);
-			if (input.length == 1 && input[0].equals("status")){
+			if (input.length == 1 && input[0].equals(REQUEST_STATUS)){
 				checkStatus();
 			}
-			else if (input[0].equals("status") && isLegalElevator(input[1])){
+			else if (input[0].equals(REQUEST_STATUS) && isLegalElevator(input[1])){
 				checkStatus(Integer.parseInt(input[1]));
 			}
 			else if (input.length == 2 && input[0].equals(REQUEST_LOG) && isLegalElevator(input[1])){
 				printRequestLog(Integer.parseInt(input[1]));
 			}
-			else if (input.length == 2 && input[0].equals("request") && isLegalFloor(input[1])){
+			else if (input.length == 2 && input[0].equals(REQUEST_REQUEST) && isLegalFloor(input[1])){
 				addRequest(STATIONARY, Integer.parseInt(input[1]));
 				System.out.println("Request added.");
 			}
-			else if (input.length == 3 && input[0].equals("pickup") && isLegalFloor(input[1]) && isLegalFloor(input[2])){
+			else if (input.length == 3 && input[0].equals(REQUEST_PICKUP) && isLegalFloor(input[1]) && isLegalFloor(input[2])){
 				if (Integer.parseInt(input[2]) - Integer.parseInt(input[1]) > 0){
 					//passenger going up
 					addPickupAndDropoff(UP, Integer.parseInt(input[1]), STATIONARY, Integer.parseInt(input[2]));
@@ -62,24 +82,12 @@ public class ControlPanel {
 			else if (input.length == 1 && input[0].equals(EXIT_COMMAND))
 				exit = true;
 			else
-				System.out.println("Error: please input a proper command. See the README file for a list of proper commands.");
-			
-			
+				System.out.println("Error: please input a proper command. See the README file for a list of proper commands.");	
 		}
-		System.out.println("Goodbye!");
-//		for (int i = 0; i < NUM_REQUESTS; i++){
-//			Request randomRequest = generateRequest();
-//			addPickupAndDropoff(0, randomRequest.getDestination(), 2, randomRequest.getDestination() + 1);
-//			//printElevators();
-//			//System.out.println();
-//		}
-//		for (Request request : elevators[0].getRequestLog())
-//			request.print();
-		
-		//printElevators();
-
+		System.out.println(EXIT_MESSAGE);
 	}
 	
+	//addRequest function adds a request to the Elevator best situated to fulfill it
 	public static void addRequest(int direction, int destination){
 		//create new request, make sure it's valid
 		Request request = new Request(direction, destination);
@@ -89,8 +97,6 @@ public class ControlPanel {
 		int bestElevator = 0;
 		double bestScore = Double.MAX_VALUE;
 		for (int i = 0; i < NUM_ELEVATORS; i++){
-//			System.out.println("Elevator " + i + " proximity score: " + elevators[i].calculateProximityScore(request));
-//			elevators[i].getStatus().print();
 			double score = elevators[i].calculateProximityScore(request);
 			if (score < bestScore){
 				bestScore = score;
@@ -100,6 +106,7 @@ public class ControlPanel {
 		elevators[bestElevator].addRequest(request);
 	}
 	
+	//addPickupAndDropoff function adds pickup and dropoff pair to Elevator best situated to fulfill them
 	public static void addPickupAndDropoff(int pickupDirection, int pickupDestination, int dropoffDirection, int dropoffDestination){
 		//create new requests, make sure they're valid
 		Request pickup = new Request(pickupDirection, pickupDestination);
@@ -110,33 +117,20 @@ public class ControlPanel {
 		int bestElevator = 0;
 		double bestScore = Double.MAX_VALUE;
 		for (int i = 0; i < NUM_ELEVATORS; i++){
-//					System.out.println("Elevator " + i + " proximity score: " + elevators[i].calculateProximityScore(request));
-//					elevators[i].getStatus().print();
+			//incorporate destination into score
 			double score = elevators[i].calculateProximityScore(pickup) + elevators[i].calculateProximityScore(dropoff) * elevators[i].getDestinationWeight();
 			if (score < bestScore){
 				bestScore = score;
 				bestElevator = i;
 			}
 		}
-		elevators[bestElevator].addPickup(pickup, dropoff);
+		elevators[bestElevator].addPickupAndDropoff(pickup, dropoff);
 	}
 	
 	public static void initializeElevators(){
 		for (int i = 0; i < NUM_ELEVATORS; i++){
 			elevators[i] = new Elevator(i);
 		}
-	}
-	
-	public static void printElevators(){
-		for (int i = 0; i < NUM_ELEVATORS; i++){
-			System.out.println("Elevator " + i + ":");
-			elevators[i].getStatus().print();
-		}
-	}
-	
-	public static Request generateRequest(){
-		Request randomRequest = new Request(rand.nextInt(NUM_CONDITIONS), rand.nextInt(MAX_FLOOR));
-		return randomRequest;
 	}
 	
 	private static void checkStatus(){
@@ -147,16 +141,18 @@ public class ControlPanel {
 		}
 	}
 	
-	private static void printRequestLog(int i){
-		for (Request request : elevators[i].getRequestLog()){
-			request.print();
-		}
-	}
-	
 	private static void checkStatus(int i){
 		System.out.println("Elevator " + i + ": " );
 		elevators[i].getStatus().print();
 		System.out.println();
+	}
+	
+	private static void printRequestLog(int i){
+		if (elevators[i].getRequestLog().isEmpty())
+			System.out.println("Elevator " + i + " has not received any requests.");
+		for (Request request : elevators[i].getRequestLog()){
+			request.print();
+		}
 	}
 	
 	private static boolean isLegalElevator(String s){
@@ -170,11 +166,17 @@ public class ControlPanel {
 			return true;
 		return false;
 	}
-
-//    Querying the state of the elevators (what floor are they on and where they are going),
-//    receiving an update about the status of an elevator,
-//    receiving a pickup request,
-//    time-stepping the simulation.
-
-
+	
+	//DON'T DELETE ME! I AM A TIMELESS RELIC OF THE PAST
+	public static Request generateRequest(){
+		Request randomRequest = new Request(rand.nextInt(NUM_CONDITIONS), rand.nextInt(MAX_FLOOR));
+		return randomRequest;
+	}
+	
+	public static void printElevators(){
+		for (int i = 0; i < NUM_ELEVATORS; i++){
+			System.out.println("Elevator " + i + ":");
+			elevators[i].getStatus().print();
+		}
+	}
 }

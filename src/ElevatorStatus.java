@@ -1,4 +1,5 @@
-
+//ElevatorStatus contains an elevator's current floor and it's direction. With more time, I'd love to add
+//it's scheduled stops
 public class ElevatorStatus {
 
 	//possible directions
